@@ -209,9 +209,14 @@ update
     }
 
 .today-slot {
-    background-color: #f0fbff;
+    background-color: #e0f7fa;
 }
 
+.today-highlight {
+    background-color: #e0f7fa;
+    border-bottom: 3px solid #00acc1;
+    font-weight: bold;
+}
 
 /* Responsive Tweaks */
 @media (max-width: 768px) {
