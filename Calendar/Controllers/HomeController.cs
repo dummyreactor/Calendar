@@ -1,16 +1,23 @@
+using Calendar.Domain.Interfaces.IScheduledTask;
 using Calendar.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
-using Microsoft.AspNetCore.Http;
 
 namespace Calendar.Controllers
 {
     public class HomeController : Controller
     {
-        public IActionResult Index(string direction)
+        private readonly IScheduledTaskService _taskService;
+
+        public HomeController(IScheduledTaskService taskService)
         {
-            // Get current start of week from session or set to this Monday
+            _taskService = taskService;
+        }
+
+        public async Task<IActionResult> Index(string direction)
+        {
             DateTime startOfWeek = HttpContext.Session.Get<DateTime>("StartOfWeek");
             if (startOfWeek == default)
             {
@@ -19,15 +26,10 @@ namespace Calendar.Controllers
                 startOfWeek = today.AddDays(delta);
             }
 
-            // Adjust week if navigating
             switch (direction)
             {
-                case "prev":
-                    startOfWeek = startOfWeek.AddDays(-7);
-                    break;
-                case "next":
-                    startOfWeek = startOfWeek.AddDays(7);
-                    break;
+                case "prev": startOfWeek = startOfWeek.AddDays(-7); break;
+                case "next": startOfWeek = startOfWeek.AddDays(7); break;
                 case "today":
                     DateTime today = DateTime.Today;
                     int delta = DayOfWeek.Monday - today.DayOfWeek;
@@ -35,18 +37,14 @@ namespace Calendar.Controllers
                     break;
             }
 
-            // Save updated week to session
             HttpContext.Session.Set("StartOfWeek", startOfWeek);
 
-            // Generate week dates
-            List<DateTime> weekDates = new List<DateTime>();
-            for (int i = 0; i < 7; i++)
-            {
-                weekDates.Add(startOfWeek.AddDays(i));
-            }
+            var weekDates = Enumerable.Range(0, 7).Select(i => startOfWeek.AddDays(i)).ToList();
+            var tasks = await _taskService.GetWeeklyTasksAsync(startOfWeek);
 
             ViewBag.WeekDates = weekDates;
             ViewBag.WeekRange = $"{weekDates[0]:dd MMM} – {weekDates[6]:dd MMM yyyy}";
+            ViewBag.Tasks = tasks;
 
             return View();
         }

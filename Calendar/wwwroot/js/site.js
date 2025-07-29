@@ -262,10 +262,12 @@ function makeTaskDraggable(task) {
         const title = task.querySelector('strong')?.textContent || task.textContent.trim();
         const desc = task.querySelector('small')?.textContent || "";
         const duration = task.dataset.duration || 1;
+        const taskId = task.dataset.taskId || null; // ✅ Get taskId if present
 
-        const payload = JSON.stringify({ title, desc, duration });
+        const payload = JSON.stringify({ title, desc, duration, taskId });
         e.dataTransfer.setData("text/plain", payload);
         e.dataTransfer.setData("source", task.closest(".task-panel") ? "task-panel" : "calendar");
+
         task.classList.add("dragging");
     });
 
@@ -315,7 +317,7 @@ document.querySelectorAll('.calendar-slot').forEach(slot => {
         const source = e.dataTransfer.getData("source");
 
         const dragging = document.querySelector('.dragging');
-        if (dragging) dragging.remove();
+        if (dragging) dragging.remove();    
 
         const duration = parseInt(data.duration) || 1;
         const day = slot.dataset.day;
@@ -328,7 +330,9 @@ document.querySelectorAll('.calendar-slot').forEach(slot => {
             if (i === 0) {
                 const newTask = document.createElement('div');
                 newTask.className = "task-card bg-success text-white";
-                newTask.innerHTML = `<strong>${data.title}</strong><br><small>${data.desc}</small>`;
+                newTask.innerHTML = `<strong>${data.title}</strong><br>
+                                    <small>${data.desc}</small><br>
+                                    <small>Task ID: ${data.taskId}</small>`;
                 newTask.dataset.duration = duration;
                 newTask.style.height = `${48 * duration}px`;
                 newTask.style.position = 'absolute';
@@ -340,6 +344,32 @@ document.querySelectorAll('.calendar-slot').forEach(slot => {
                 makeTaskDraggable(newTask);
                 targetSlot.appendChild(newTask);
                 targetSlot.style.position = 'relative';
+
+                // ✅ AJAX to save to backend
+                const payloadToServer = {
+                    taskId: data.taskId,
+                    title: data.title,
+                    description: data.desc,
+                    duration: duration,
+                    scheduledDate: `${day}T${String(hour).padStart(2, '0')}:00:00`
+                };
+
+                fetch('/Task/Add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payloadToServer)
+                })
+                    .then(response => {
+                        if (!response.ok) throw new Error("Failed to save scheduled task.");
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log("Scheduled task saved:", data);
+                    })
+                    .catch(error => {
+                        console.error("Error:", error);
+                    });
+
             }
         }
     });
@@ -415,6 +445,34 @@ if (taskList) {
         setTimeout(() => taskTitleInput.focus(), 200);
     });
 
+    //saveTaskBtn.addEventListener('click', () => {
+    //    const title = taskTitleInput.value.trim();
+    //    const desc = taskDescInput.value.trim();
+    //    const duration = parseInt(taskDurationInput.value) || 1;
+
+    //    if (title === '') return;
+
+    //    const editingTask = document.querySelector('.task-card[data-editing="true"]');
+    //    if (editingTask) {
+    //        editingTask.querySelector('strong').textContent = title;
+    //        editingTask.querySelector('small').textContent = desc;
+    //        editingTask.dataset.duration = duration;
+    //        editingTask.style.height = `${48 * duration}px`;
+    //        delete editingTask.dataset.editing;
+    //        taskModal.hide();
+    //        return;
+    //    }
+
+    //    const taskCard = document.createElement('div');
+    //    taskCard.className = 'task-card';
+    //    taskCard.innerHTML = `<strong>${title}</strong><br><small>${desc}</small>`;
+    //    taskCard.dataset.duration = duration;
+
+    //    makeTaskDraggable(taskCard);
+    //    taskList.appendChild(taskCard);
+    //    taskModal.hide();
+    //});
+
     saveTaskBtn.addEventListener('click', () => {
         const title = taskTitleInput.value.trim();
         const desc = taskDescInput.value.trim();
@@ -422,25 +480,44 @@ if (taskList) {
 
         if (title === '') return;
 
-        const editingTask = document.querySelector('.task-card[data-editing="true"]');
-        if (editingTask) {
-            editingTask.querySelector('strong').textContent = title;
-            editingTask.querySelector('small').textContent = desc;
-            editingTask.dataset.duration = duration;
-            editingTask.style.height = `${48 * duration}px`;
-            delete editingTask.dataset.editing;
-            taskModal.hide();
-            return;
-        }
+        fetch('/Task/CreateNewTask', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                title: title,
+                description: desc,
+                duration: duration
+            })
+        })
+            .then(response => {
+                if (!response.ok) throw new Error("Failed to create task");
+                return response.json();
+            })
+            .then(data => {
+                console.log("Task created:", data.message);
 
-        const taskCard = document.createElement('div');
-        taskCard.className = 'task-card';
-        taskCard.innerHTML = `<strong>${title}</strong><br><small>${desc}</small>`;
-        taskCard.dataset.duration = duration;
+                // Optionally update UI
+                const taskCard = document.createElement('div');
+                taskCard.className = 'task-card';
+                //taskCard.innerHTML = `<strong>${title}</strong><br><small>${desc}</small><br><small>${}</small>`;
+                taskCard.dataset.duration = duration;
+                taskCard.dataset.taskId = data.taskId;
+                taskCard.innerHTML = `
+                    <strong>${title}</strong><br>
+                    <small>${desc}</small><br>
+                    <small>Task ID: ${data.taskId}</small>
+`;
 
-        makeTaskDraggable(taskCard);
-        taskList.appendChild(taskCard);
-        taskModal.hide();
+                makeTaskDraggable(taskCard);
+                taskList.appendChild(taskCard);
+
+                taskModal.hide();
+            })
+            .catch(err => {
+                alert("Error: " + err.message);
+            });
     });
 
     taskTitleInput.addEventListener('keypress', function (e) {
