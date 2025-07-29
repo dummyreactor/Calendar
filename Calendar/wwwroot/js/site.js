@@ -413,6 +413,18 @@ if (taskList) {
 
         makeTaskDraggable(restoredTask);
         taskList.appendChild(restoredTask);
+
+        if (data.taskId) {
+            fetch(`/Task/Remove?taskId=${data.taskId}`, {
+                method: "DELETE"
+            })
+                .then(res => {
+                    if (!res.ok) throw new Error("Failed to unschedule.");
+                    console.log("Task unscheduled successfully.");
+                })
+                .catch(err => console.error("Unscheduled error:", err));
+        }
+
     });
 
     // Trash Can
@@ -445,33 +457,6 @@ if (taskList) {
         setTimeout(() => taskTitleInput.focus(), 200);
     });
 
-    //saveTaskBtn.addEventListener('click', () => {
-    //    const title = taskTitleInput.value.trim();
-    //    const desc = taskDescInput.value.trim();
-    //    const duration = parseInt(taskDurationInput.value) || 1;
-
-    //    if (title === '') return;
-
-    //    const editingTask = document.querySelector('.task-card[data-editing="true"]');
-    //    if (editingTask) {
-    //        editingTask.querySelector('strong').textContent = title;
-    //        editingTask.querySelector('small').textContent = desc;
-    //        editingTask.dataset.duration = duration;
-    //        editingTask.style.height = `${48 * duration}px`;
-    //        delete editingTask.dataset.editing;
-    //        taskModal.hide();
-    //        return;
-    //    }
-
-    //    const taskCard = document.createElement('div');
-    //    taskCard.className = 'task-card';
-    //    taskCard.innerHTML = `<strong>${title}</strong><br><small>${desc}</small>`;
-    //    taskCard.dataset.duration = duration;
-
-    //    makeTaskDraggable(taskCard);
-    //    taskList.appendChild(taskCard);
-    //    taskModal.hide();
-    //});
 
     saveTaskBtn.addEventListener('click', () => {
         const title = taskTitleInput.value.trim();

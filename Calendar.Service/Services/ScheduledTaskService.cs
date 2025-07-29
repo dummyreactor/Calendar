@@ -38,5 +38,10 @@ namespace Calendar.Service.Services
         {
             return await _taskRepository.GetTaskByIdAsync(taskId);
         }
+
+        public async Task<bool> DeleteTaskAsync(int taskId)
+        {
+            return await _taskRepository.DeleteTaskAsync(taskId);
+        }
     }
 }

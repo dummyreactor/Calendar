@@ -44,5 +44,14 @@ namespace Calendar.DataAccess.Repositories
         {
             return await _context.NewTasks.FindAsync(taskId);
         }
+
+        public async Task<bool> DeleteTaskAsync(int taskId)
+        {
+            var task = await _context.ScheduledTasks.FindAsync(taskId);
+            if (task == null) return false;
+
+            _context.ScheduledTasks.Remove(task);
+            return await _context.SaveChangesAsync() > 0;
+        }
     }
 }

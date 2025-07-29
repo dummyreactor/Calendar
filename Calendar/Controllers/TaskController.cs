@@ -63,5 +63,19 @@ namespace Calendar.Controllers
             await _taskService.AddScheduledAsync(scheduled);
             return Ok(new { message = "Scheduled successfully" });
         }
+
+        [HttpDelete("Remove")]
+        public async Task<IActionResult> Remove([FromQuery] int taskId)
+        {
+            var task = await _taskService.GetTaskByIdAsync(taskId);
+            if (task == null)
+                return NotFound("Task not found.");
+
+            var deleted = await _taskService.DeleteTaskAsync(taskId);
+            if (!deleted)
+                return StatusCode(500, "Failed to delete the task.");
+
+            return Ok(new { message = "Task deleted successfully." });
+        }
     }
 }
