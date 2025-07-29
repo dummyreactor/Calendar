@@ -1,4 +1,5 @@
-﻿using Calendar.Domain.Interfaces.IScheduledTask;
+﻿using Calendar.DataAccess.Repositories;
+using Calendar.Domain.Interfaces.IScheduledTask;
 using Calendar.Domain.Models;
 using System;
 using System.Collections.Generic;
@@ -42,6 +43,16 @@ namespace Calendar.Service.Services
         public async Task<bool> DeleteTaskAsync(int taskId)
         {
             return await _taskRepository.DeleteTaskAsync(taskId);
+        }
+
+        public async Task<List<NewTask>> GetAllTasksAsync()
+        {
+            return await _taskRepository.GetAllTasksAsync();
+        }
+
+        public async Task<List<ScheduledTask>> GetAllScheduledTasksAsync()
+        {
+            return await _taskRepository.GetAllScheduledTasksAsync();
         }
     }
 }

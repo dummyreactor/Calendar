@@ -47,11 +47,22 @@ namespace Calendar.DataAccess.Repositories
 
         public async Task<bool> DeleteTaskAsync(int taskId)
         {
-            var task = await _context.ScheduledTasks.FindAsync(taskId);
+            var task = await _context.ScheduledTasks
+                    .FirstOrDefaultAsync(t => t.TaskId == taskId);
             if (task == null) return false;
 
             _context.ScheduledTasks.Remove(task);
             return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<List<NewTask>> GetAllTasksAsync()
+        {
+            return await _context.NewTasks.ToListAsync();
+        }
+
+        public async Task<List<ScheduledTask>> GetAllScheduledTasksAsync()
+        {
+            return await _context.ScheduledTasks.ToListAsync();
         }
     }
 }

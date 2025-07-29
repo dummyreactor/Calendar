@@ -3,6 +3,8 @@
     var weekDates = ViewBag.WeekDates as List<DateTime>;
     var hours = Enumerable.Range(0, 24).ToList(); // 24-hour format
     var tasks = ViewBag.Tasks as List<Calendar.Domain.Models.ScheduledTask>;
+
+    var unscheduledTasks = ViewBag.UnscheduledTasks as List<Calendar.Domain.Models.NewTask>;
 }
 
 <div class="calendar-wrapper">
@@ -14,10 +16,23 @@
         </div>
 
         <div class="task-list" id="task-list">
-            <div class="task-card" draggable="true">
-                <strong>Title</strong><br />
-                <small>Task description</small>
-            </div>
+            @if (unscheduledTasks != null && unscheduledTasks.Any())
+            {
+                foreach (var task in unscheduledTasks)
+                {
+                    <div class="task-card"
+                         draggable="true"
+                         data-task-id="@task.TaskId"
+                         data-duration="@task.Duration">
+                        <strong>@task.Title</strong><br />
+                        <small>@task.Description</small>
+                    </div>
+                }
+            }
+            else
+            {
+                <p class="text-muted">No tasks available</p>
+            }
         </div>
     </aside>
 
@@ -101,7 +116,8 @@
                                         @if (task.EndTime.HasValue)
                                         {
                                             @("- " + task.EndTime.Value.ToString(@"hh\:mm"))
-                                        }
+                                        }<br />
+                                        @task.TaskId
                                     </div>
                                 }
                             }

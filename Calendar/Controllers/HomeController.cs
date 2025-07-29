@@ -42,9 +42,18 @@ namespace Calendar.Controllers
             var weekDates = Enumerable.Range(0, 7).Select(i => startOfWeek.AddDays(i)).ToList();
             var tasks = await _taskService.GetWeeklyTasksAsync(startOfWeek);
 
+            var allTasks = await _taskService.GetAllTasksAsync(); // From NewTask table
+            var scheduledTasks = await _taskService.GetAllScheduledTasksAsync(); // From ScheduledTask table
+
+            var scheduledTaskIds = scheduledTasks.Select(st => st.TaskId).ToHashSet();
+            var unscheduledTasks = allTasks.Where(t => !scheduledTaskIds.Contains(t.TaskId)).ToList();
+
+
             ViewBag.WeekDates = weekDates;
             ViewBag.WeekRange = $"{weekDates[0]:dd MMM} – {weekDates[6]:dd MMM yyyy}";
             ViewBag.Tasks = tasks;
+            ViewBag.UnscheduledTasks = unscheduledTasks;
+
 
             return View();
         }

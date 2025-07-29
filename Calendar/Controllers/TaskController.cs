@@ -64,7 +64,7 @@ namespace Calendar.Controllers
             return Ok(new { message = "Scheduled successfully" });
         }
 
-        [HttpDelete("Remove")]
+        [HttpDelete("/Task/Remove")]
         public async Task<IActionResult> Remove([FromQuery] int taskId)
         {
             var task = await _taskService.GetTaskByIdAsync(taskId);
