@@ -69,30 +69,46 @@ document.querySelectorAll('.calendar-slot').forEach(slot => {
 
         const day = slot.dataset.day;
         const hour = parseInt(slot.dataset.hour);
+        const requiredSlots = Math.ceil(durationInMinutes / 60);
 
-        const currentSlot = document.querySelector(`.calendar-slot[data-day="${day}"][data-hour="${hour}"]`);
-        const existingTasks = Array.from(currentSlot.querySelectorAll('.task-card'));
+        // Collect all needed slots for multi-hour tasks
+        const spanSlots = [];
+        for (let i = 0; i < requiredSlots; i++) {
+            const targetSlot = document.querySelector(`.calendar-slot[data-day="${day}"][data-hour="${hour + i}"]`);
+            if (targetSlot) spanSlots.push(targetSlot);
+        }
 
-        let existingDurationInMinutes = 0;
+        // Cancel drop if not enough slots exist
+        if (spanSlots.length < requiredSlots) {
+            alert("Not enough available slots to drop this task.");
+            restoreToTaskList(data, duration);
+            return;
+        }
+
         const usedColors = new Set();
+        let slotOccupied = false;
+        let totalUsedMinutes = 0;
 
-        existingTasks.forEach(task => {
-            const taskDuration = parseFloat(task.dataset.duration) || 1;
-            existingDurationInMinutes += taskDuration * 60;
-
-            const bg = task.dataset.color;
-            if (bg) usedColors.add(bg);
+        spanSlots.forEach(s => {
+            const tasks = s.querySelectorAll('.task-card');
+            if (tasks.length > 0) slotOccupied = true;
+            tasks.forEach(t => {
+                totalUsedMinutes += (parseFloat(t.dataset.duration) || 1) * 60;
+                const c = t.dataset.color;
+                if (c) usedColors.add(c);
+            });
         });
 
-        if ((existingDurationInMinutes + durationInMinutes) > 60) {
-            alert("Combined tasks exceed 60 minutes. Cannot place more in this slot.");
+        const isSingleLongTask = durationInMinutes > 60;
+        if (isSingleLongTask && slotOccupied) {
+            alert("Long tasks (>60 minutes) must be placed in empty consecutive slots.");
+            restoreToTaskList(data, duration);
+            return;
+        }
 
-            const restoredTask = document.createElement('div');
-            restoredTask.className = 'task-card';
-            restoredTask.innerHTML = `<strong>${data.title}</strong><br><small>${data.desc}</small>`;
-            restoredTask.dataset.duration = duration;
-            makeTaskDraggable(restoredTask);
-            document.querySelector('.task-list')?.appendChild(restoredTask);
+        if (!isSingleLongTask && totalUsedMinutes + durationInMinutes > 60) {
+            alert("Combined tasks exceed 60 minutes. Cannot place more in this slot range.");
+            restoreToTaskList(data, duration);
             return;
         }
 
@@ -102,64 +118,27 @@ document.querySelectorAll('.calendar-slot').forEach(slot => {
             ? availableColors[Math.floor(Math.random() * availableColors.length)]
             : allColors[Math.floor(Math.random() * allColors.length)];
 
+        const topSlot = spanSlots[0];
+        const slotHeight = topSlot.clientHeight;
+        const totalHeight = (slotHeight + 1) * requiredSlots - 4;
+
         const newTask = document.createElement('div');
         newTask.className = "task-card";
         newTask.innerHTML = `<strong>${data.title}</strong><br><small>${data.desc}</small>`;
         newTask.dataset.duration = duration;
         newTask.dataset.color = chosenColor;
 
-        // Stack logic
-        //const index = existingTasks.length;
-        //newTask.style.backgroundColor = chosenColor;
-        //newTask.style.color = '#fff';
-        //newTask.style.position = 'absolute';
-        //newTask.style.top = `${index * 4}px`;
-        //newTask.style.left = `${index * 4}px`;
-        //newTask.style.height = '40px';
-        //newTask.style.width = '90%';
-        //newTask.style.zIndex = `${10 + index}`;
-        const stackIndex = existingTasks.length;
-        const slotHeight = currentSlot.clientHeight;
-        const taskHeight = 42; // fixed height
-        const margin = 6;
-        const totalNeededHeight = (taskHeight + margin) * (stackIndex + 1);
-
-        let overlap = false;
-        if (totalNeededHeight > slotHeight) {
-            overlap = true;
-        }
-
-        // Base styles
+        // Style task to visually span multiple rows
         newTask.style.backgroundColor = chosenColor;
         newTask.style.color = '#fff';
         newTask.style.position = 'absolute';
-        newTask.style.height = `${taskHeight}px`;
+        newTask.style.height = `${totalHeight}px`;
         newTask.style.width = 'calc(100% - 10px)';
         newTask.style.left = '5px';
-        newTask.style.zIndex = `${10 + stackIndex}`;
-
-        // Positioning
-        if (overlap) {
-            const overlapOffset = 12; // How much each card peeks
-            newTask.style.top = `${stackIndex * overlapOffset}px`;
-            newTask.style.opacity = stackIndex === existingTasks.length ? '1' : '0.9';
-        } else {
-            newTask.style.top = `${stackIndex * (taskHeight + margin)}px`;
-        }
-
-        // Hover animation
+        newTask.style.top = '0px';
+        newTask.style.zIndex = '20';
         newTask.style.transition = 'transform 0.2s ease, box-shadow 0.2s ease';
-        newTask.addEventListener('mouseenter', () => {
-            newTask.style.transform = 'scale(1.05)';
-            newTask.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
-        });
-        newTask.addEventListener('mouseleave', () => {
-            newTask.style.transform = 'scale(1)';
-            newTask.style.boxShadow = 'none';
-        });
 
-
-        newTask.style.transition = 'transform 0.2s ease, box-shadow 0.2s ease';
         newTask.addEventListener('mouseenter', () => {
             newTask.style.transform = 'scale(1.05)';
             newTask.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
@@ -170,10 +149,21 @@ document.querySelectorAll('.calendar-slot').forEach(slot => {
         });
 
         makeTaskDraggable(newTask);
-        currentSlot.appendChild(newTask);
-        currentSlot.style.position = 'relative';
+        topSlot.appendChild(newTask);
+        topSlot.style.position = 'relative';
     });
 });
+
+// Restore task to task list if drop fails
+function restoreToTaskList(data, duration) {
+    const restoredTask = document.createElement('div');
+    restoredTask.className = 'task-card';
+    restoredTask.innerHTML = `<strong>${data.title}</strong><br><small>${data.desc}</small>`;
+    restoredTask.dataset.duration = duration;
+    makeTaskDraggable(restoredTask);
+    document.querySelector('.task-list')?.appendChild(restoredTask);
+}
+
 
 
 // =======================
