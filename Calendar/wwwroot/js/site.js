@@ -68,49 +68,62 @@ document.querySelectorAll('.calendar-slot').forEach(slot => {
         const durationInMinutes = duration * 60;
 
         const day = slot.dataset.day;
-        const hour = parseInt(slot.dataset.hour);
-        const requiredSlots = Math.ceil(durationInMinutes / 60);
+        const hour = parseInt(slot.dataset.hour, 10);
 
-        // Collect all needed slots for multi-hour tasks
+        // Ensure the drop target slot is positioned BEFORE any measurements
+        const currentSlot = document.querySelector(`.calendar-slot[data-day="${day}"][data-hour="${hour}"]`);
+        currentSlot.style.position = currentSlot.style.position || 'relative';
+        currentSlot.style.overflow = currentSlot.style.overflow || 'visible';
+
+        // Gather existing tasks in this single slot (for <=60 min stacking rule)
+        const existingTasks = Array.from(currentSlot.querySelectorAll('.task-card'));
+
+        let existingDurationInMinutes = 0;
+        const usedColorsSingleSlot = new Set();
+        existingTasks.forEach(task => {
+            const taskDuration = parseFloat(task.dataset.duration) || 1;
+            existingDurationInMinutes += taskDuration * 60;
+            const bg = task.dataset.color;
+            if (bg) usedColorsSingleSlot.add(bg);
+        });
+
+        // --- Rules: allow single long task across multiple rows, block stacking > 60 ---
+        const isSingleLongTask = durationInMinutes > 60;
+        const isSlotEmpty = existingTasks.length === 0;
+
+        // Multi-row preparation: which slots would be spanned?
+        const requiredSlots = Math.ceil(durationInMinutes / 60);
         const spanSlots = [];
         for (let i = 0; i < requiredSlots; i++) {
-            const targetSlot = document.querySelector(`.calendar-slot[data-day="${day}"][data-hour="${hour + i}"]`);
-            if (targetSlot) spanSlots.push(targetSlot);
+            const s = document.querySelector(`.calendar-slot[data-day="${day}"][data-hour="${hour + i}"]`);
+            if (!s) break;
+            spanSlots.push(s);
         }
 
-        // Cancel drop if not enough slots exist
+        // Not enough slots (end of day)
         if (spanSlots.length < requiredSlots) {
             alert("Not enough available slots to drop this task.");
-            restoreToTaskList(data, duration);
-            return;
+            return restoreToTaskList(data, duration);
         }
 
-        const usedColors = new Set();
-        let slotOccupied = false;
-        let totalUsedMinutes = 0;
+        if (isSingleLongTask && !isSlotEmpty) {
+            alert("Long tasks (>60 minutes) must be placed in an empty slot.");
+            return restoreToTaskList(data, duration);
+        }
 
+        if (!isSingleLongTask && (existingDurationInMinutes + durationInMinutes > 60)) {
+            alert("Combined tasks exceed 60 minutes. Cannot place more in this slot.");
+            return restoreToTaskList(data, duration);
+        }
+
+        // Color choice (consider colors across spanned slots to avoid collision)
+        const usedColors = new Set(usedColorsSingleSlot);
         spanSlots.forEach(s => {
-            const tasks = s.querySelectorAll('.task-card');
-            if (tasks.length > 0) slotOccupied = true;
-            tasks.forEach(t => {
-                totalUsedMinutes += (parseFloat(t.dataset.duration) || 1) * 60;
+            s.querySelectorAll('.task-card').forEach(t => {
                 const c = t.dataset.color;
                 if (c) usedColors.add(c);
             });
         });
-
-        const isSingleLongTask = durationInMinutes > 60;
-        if (isSingleLongTask && slotOccupied) {
-            alert("Long tasks (>60 minutes) must be placed in empty consecutive slots.");
-            restoreToTaskList(data, duration);
-            return;
-        }
-
-        if (!isSingleLongTask && totalUsedMinutes + durationInMinutes > 60) {
-            alert("Combined tasks exceed 60 minutes. Cannot place more in this slot range.");
-            restoreToTaskList(data, duration);
-            return;
-        }
 
         const allColors = ['#f44336', '#4caf50', '#2196f3', '#ff9800', '#9c27b0', '#00bcd4', '#8bc34a', '#e91e63'];
         const availableColors = allColors.filter(c => !usedColors.has(c));
@@ -118,27 +131,19 @@ document.querySelectorAll('.calendar-slot').forEach(slot => {
             ? availableColors[Math.floor(Math.random() * availableColors.length)]
             : allColors[Math.floor(Math.random() * allColors.length)];
 
-        const topSlot = spanSlots[0];
-        const slotHeight = topSlot.clientHeight;
-        const totalHeight = (slotHeight + 1) * requiredSlots - 4;
-
         const newTask = document.createElement('div');
         newTask.className = "task-card";
         newTask.innerHTML = `<strong>${data.title}</strong><br><small>${data.desc}</small>`;
         newTask.dataset.duration = duration;
         newTask.dataset.color = chosenColor;
 
-        // Style task to visually span multiple rows
+        // Common styles
         newTask.style.backgroundColor = chosenColor;
         newTask.style.color = '#fff';
         newTask.style.position = 'absolute';
-        newTask.style.height = `${totalHeight}px`;
-        newTask.style.width = 'calc(100% - 10px)';
         newTask.style.left = '5px';
-        newTask.style.top = '0px';
-        newTask.style.zIndex = '20';
+        newTask.style.width = 'calc(100% - 10px)';
         newTask.style.transition = 'transform 0.2s ease, box-shadow 0.2s ease';
-
         newTask.addEventListener('mouseenter', () => {
             newTask.style.transform = 'scale(1.05)';
             newTask.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
@@ -148,13 +153,57 @@ document.querySelectorAll('.calendar-slot').forEach(slot => {
             newTask.style.boxShadow = 'none';
         });
 
-        makeTaskDraggable(newTask);
-        topSlot.appendChild(newTask);
-        topSlot.style.position = 'relative';
+        if (isSingleLongTask) {
+            // Place in the first (top) slot, but span visually across rows
+            const topSlot = spanSlots[0];
+            // Ensure position BEFORE measuring height
+            topSlot.style.position = topSlot.style.position || 'relative';
+            topSlot.style.overflow = topSlot.style.overflow || 'visible';
+
+            // Force a reflow so clientHeight is up-to-date
+            void topSlot.offsetHeight;
+
+            const slotHeight = topSlot.clientHeight || 48; // fallback
+            const totalHeight = (slotHeight) * requiredSlots - 4;
+
+            newTask.style.top = '0px';
+            newTask.style.height = `${totalHeight}px`;
+            newTask.style.zIndex = '20';
+
+            makeTaskDraggable(newTask);
+            topSlot.appendChild(newTask);
+
+        } else {
+            // <= 60 min: stack inside the single hour slot
+            // Ensure position BEFORE measuring/placing
+            void currentSlot.offsetHeight; // reflow to make sure clientHeight is correct
+
+            const stackIndex = existingTasks.length;
+            const baseHeight = 40;
+            const margin = 1;
+            const slotHeight = currentSlot.clientHeight || 48;
+            const totalNeededHeight = (baseHeight + margin) * (stackIndex + 1);
+
+            const overlap = totalNeededHeight > slotHeight;
+            newTask.style.height = `${baseHeight}px`;
+            newTask.style.zIndex = `${10 + stackIndex}`;
+
+            if (overlap) {
+                const overlapOffset = 10; // tighter overlap
+                newTask.style.top = `${stackIndex * overlapOffset}px`;
+                newTask.style.opacity = stackIndex === existingTasks.length ? '1' : '0.9';
+            } else {
+                newTask.style.top = `${stackIndex * (baseHeight + margin)}px`;
+            }
+
+
+            makeTaskDraggable(newTask);
+            currentSlot.appendChild(newTask);
+        }
     });
 });
 
-// Restore task to task list if drop fails
+// Restore helper
 function restoreToTaskList(data, duration) {
     const restoredTask = document.createElement('div');
     restoredTask.className = 'task-card';
@@ -163,8 +212,6 @@ function restoreToTaskList(data, duration) {
     makeTaskDraggable(restoredTask);
     document.querySelector('.task-list')?.appendChild(restoredTask);
 }
-
-
 
 // =======================
 // TASK PANEL DROP & CREATE
