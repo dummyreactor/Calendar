@@ -208,6 +208,11 @@ update
         background-color: #cc0000;
     }
 
+.today-slot {
+    background-color: #f0fbff;
+}
+
+
 /* Responsive Tweaks */
 @media (max-width: 768px) {
     .task-panel {
