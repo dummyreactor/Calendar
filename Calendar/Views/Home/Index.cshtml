@@ -9,32 +9,33 @@
 
 <div class="calendar-wrapper">
     <!-- Sidebar for Tasks -->
-    <aside class="task-panel">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3 class="mb-0">Tasks</h3>
-            <button id="add-task-btn" class="btn btn-sm btn-outline-success" title="Add Task">➕</button>
-        </div>
+    <aside class="task-panel"> 
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="mb-0">Tasks</h3>
+        <button id="add-task-btn" class="btn btn-sm btn-outline-success" title="Add Task">➕</button>
+    </div>
 
-        <div class="task-list" id="task-list">
-            @if (unscheduledTasks != null && unscheduledTasks.Any())
+    <div class="task-list" id="task-list">
+        @if (unscheduledTasks != null && unscheduledTasks.Any())
+        {
+            foreach (var task in unscheduledTasks)
             {
-                foreach (var task in unscheduledTasks)
-                {
-                    <div class="task-card"
-                         draggable="true"
-                         data-task-id="@task.TaskId"
-                         data-duration="@task.Duration">
-                        <strong>@task.Title</strong><br />
-                        <small>@task.Description</small>
-                    </div>
-                }
+                <div class="task-card" 
+                     draggable="true"
+                     data-task-id="@task.TaskId"
+                     data-duration="@task.Duration">
+                    <strong>@task.Title</strong><br />
+                    <small>@task.Description</small>
+                    <small>@task.TaskId</small>
+                </div>
             }
-            else
-            {
-                <p class="text-muted">No tasks available</p>
-            }
-        </div>
-    </aside>
+        }
+        else
+        {
+            <p class="text-muted">No tasks available</p>
+        }
+    </div>
+</aside>
 
     <!-- Main Calendar Section -->
     <main class="calendar-board">
@@ -74,22 +75,8 @@
         </div>
 
         <!-- Calendar Grid Rows -->
-        @* <div class="calendar-grid">
-            @foreach (var hour in hours)
-            {
-                <div class="calendar-row">
-                    <div class="time-label-cell">
-                        @DateTime.Today.AddHours(hour).ToString("HH:mm")
-                    </div>
-                    @for (int i = 0; i < weekDates.Count; i++)
-                    {
-                        <div class="calendar-slot" data-day="@weekDates[i].ToString("yyyy-MM-dd")" data-hour="@hour"></div>
-                    }
-                </div>
-            }
-        </div> *@
-
-        <div class="calendar-grid">
+        
+         <div class="calendar-grid">
             @foreach (var hour in hours)
             {
                 <div class="calendar-row">
@@ -109,15 +96,15 @@
                             {
                                 foreach (var task in slotTasks)
                                 {
-                                    <div class="scheduled-task">
-                                        @task.NewTask?.Title ?? "Task"
-                                        <br />
-                                        @task.StartTime.ToString(@"hh\:mm")
-                                        @if (task.EndTime.HasValue)
-                                        {
+                                    <div class="scheduled-task task-card bg-success text-white"
+                                         data-task-id="@task.TaskId"
+                                         data-duration= @task.NewTask.Duration >
+                                        <strong>@(task.NewTask?.Title ?? "Task")</strong><br />
+                                        <small>@task.NewTask.Description</small><br>
+                                        <small>
+                                            @task.StartTime.ToString(@"hh\:mm")
                                             @("- " + task.EndTime.Value.ToString(@"hh\:mm"))
-                                        }<br />
-                                        @task.TaskId
+                                        </small>
                                     </div>
                                 }
                             }
@@ -142,14 +129,10 @@
             </div>
             <div class="modal-body">
                 <input type="text" id="new-task-title" class="form-control form-control-sm mb-2" placeholder="Task title..." />
-                <input type="number" id="new-task-duration" class="form-control form-control-sm mb-2" placeholder="Duration (hours)" min="1" max="8" />
-                @* <input type="text" id="new-task-duration"
-                       class="form-control form-control-sm mb-2"
-                       placeholder="hh:mm"
-                       pattern="^([0-7]?[0-9]):([0-5][0-9])$"
-                       maxlength="5"
-                       title="Enter duration in hh:mm format (max 08:00)" />
-                       <small class="text-muted">Format: hh:mm (max 08:00)</small> *@
+                <div class="d-flex gap-2 mb-2">
+                    <input type="number" id="new-task-hour" class="form-control form-control-sm" placeholder="Hours" min="0" max="8" />
+                    <input type="number" id="new-task-minute" class="form-control form-control-sm" placeholder="Minutes" min="0" max="59" />
+                </div>
                 <textarea id="new-task-desc" class="form-control form-control-sm mb-2" placeholder="Task description..." rows="2"></textarea>
             </div>
             <div class="modal-footer">

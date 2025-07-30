@@ -1,6 +1,7 @@
 ﻿using Calendar.DataAccess.Repositories;
 using Calendar.Domain.Interfaces.IScheduledTask;
 using Calendar.Domain.Models;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -53,6 +54,33 @@ namespace Calendar.Service.Services
         public async Task<List<ScheduledTask>> GetAllScheduledTasksAsync()
         {
             return await _taskRepository.GetAllScheduledTasksAsync();
+        }
+
+        public async Task DeleteScheduledTaskAsync(int taskId)
+        {
+            await _taskRepository.DeleteScheduledTaskAsync(taskId);
+        }
+
+        public async Task DeleteNewTaskAsync(int taskId)
+        {
+            await _taskRepository.DeleteNewTaskAsync(taskId);
+        }
+
+        public async Task UpdateTaskAsync(NewTask task)
+        {
+            await _taskRepository.UpdateTaskAsync(task);
+            
+        }
+
+        public async Task<ScheduledTask?> GetScheduledTaskByIdAsync(int taskId)
+        {
+            return await _taskRepository.GetScheduledTaskByIdAsync(taskId);
+        }
+
+        public async Task UpdateScheduledAsync(ScheduledTask task)
+        {
+            await _taskRepository.UpdateScheduledAsync(task);
+
         }
     }
 }

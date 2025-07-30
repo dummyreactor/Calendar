@@ -23,5 +23,14 @@ namespace Calendar.Domain.Interfaces.IScheduledTask
 
         Task<List<ScheduledTask>> GetAllScheduledTasksAsync();
 
+        Task DeleteScheduledTaskAsync(int taskId);
+
+        Task DeleteNewTaskAsync(int taskId);
+
+        Task UpdateTaskAsync(NewTask task);
+
+        Task<ScheduledTask?> GetScheduledTaskByIdAsync(int taskId);
+
+        Task UpdateScheduledAsync(ScheduledTask task);
     }
 }

@@ -55,6 +55,7 @@ namespace Calendar.DataAccess.Repositories
             return await _context.SaveChangesAsync() > 0;
         }
 
+
         public async Task<List<NewTask>> GetAllTasksAsync()
         {
             return await _context.NewTasks.ToListAsync();
@@ -63,6 +64,46 @@ namespace Calendar.DataAccess.Repositories
         public async Task<List<ScheduledTask>> GetAllScheduledTasksAsync()
         {
             return await _context.ScheduledTasks.ToListAsync();
+        }
+
+        public async Task DeleteScheduledTaskAsync(int taskId)
+        {
+            var scheduledTask = await _context.ScheduledTasks
+                    .FirstOrDefaultAsync(t => t.TaskId == taskId);
+            if (scheduledTask != null)
+            {
+                _context.ScheduledTasks.Remove(scheduledTask);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task DeleteNewTaskAsync(int taskId)
+        {
+            var newTask = await _context.NewTasks
+                    .FirstOrDefaultAsync(t => t.TaskId == taskId);
+            if (newTask != null)
+            {
+                _context.NewTasks.Remove(newTask);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task UpdateTaskAsync(NewTask task)
+        {
+            _context.NewTasks.Update(task);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<ScheduledTask?> GetScheduledTaskByIdAsync(int taskId)
+        {
+            return await _context.ScheduledTasks
+                .FirstOrDefaultAsync(st => st.TaskId == taskId);
+        }
+
+        public async Task UpdateScheduledAsync(ScheduledTask task)
+        {
+            _context.ScheduledTasks.Update(task);
+            await _context.SaveChangesAsync();
         }
     }
 }

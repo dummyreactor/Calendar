@@ -4,6 +4,11 @@
     {
         public string Title { get; set; }
         public string Description { get; set; }
-        public int Duration { get; set; } // In hours
+
+        public int Hour { get; set; }    // new
+        public int Minute { get; set; }  // new
+
+        // Optional: convenience property
+        public TimeSpan Duration => TimeSpan.FromHours(Hour) + TimeSpan.FromMinutes(Minute);
     }
 }
